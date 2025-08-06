@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { User, Mail, KeyRound, Lock, LogIn, Linkedin, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { User, Mail, Lock, LogIn, Linkedin, EyeOff, AlertCircle } from 'lucide-react';
 import '../styles/SignUpPage.css';
+// --- IMPORT THE VALIDATION FUNCTION ---
+import { validateEmail } from '../utils/validation';
 
 const GoogleIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5,16.25 5,12C5,7.9 8.2,4.73 12.19,4.73C14.03,4.73 15.69,5.36 16.95,6.45L19.05,4.35C17.02,2.36 14.46,1.5 12.19,1.5C7.03,1.5 3,5.58 3,12C3,18.42 7.03,22.5 12.19,22.5C17.6,22.5 21.7,18.35 21.7,12.33C21.7,11.77 21.52,11.44 21.35,11.1Z" /></svg>
@@ -31,16 +33,24 @@ const SignUpPage = ({ onSignUpSuccess, switchToLogin }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Basic frontend validation
-    if (!formData.name || !formData.email || !formData.password) {
-      setErrors(prev => ({...prev, api: 'All fields are required.'}));
+    
+    // --- ADDED VALIDATION LOGIC ---
+    const emailError = validateEmail(formData.email);
+    // Basic frontend validation for other fields
+    if (!formData.name || !formData.password || emailError) {
+      setErrors(prev => ({
+        ...prev, 
+        api: !formData.name || !formData.password ? 'All fields are required.' : '',
+        email: emailError
+      }));
       return;
     }
+
     setIsLoading(true);
-    setErrors(prev => ({...prev, api: ''}));
+    setErrors(prev => ({...prev, api: '', email: ''})); // Clear errors before submitting
 
     try {
-      const response = await fetch('https://ai-job-platform-api.onrender.com/api/signup', {
+      const response = await fetch('http://localhost:5000/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -49,7 +59,6 @@ const SignUpPage = ({ onSignUpSuccess, switchToLogin }) => {
 
       if (response.ok) {
         console.log('Signup successful:', data);
-        // On success, we can navigate to the dashboard
         onSignUpSuccess();
       } else {
         setErrors(prev => ({ ...prev, api: data.message || 'An error occurred.' }));
@@ -89,8 +98,15 @@ const SignUpPage = ({ onSignUpSuccess, switchToLogin }) => {
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input type="email" id="email" placeholder="you@example.com" value={formData.email} onChange={handleChange} disabled={isLoading}
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border rounded-lg text-gray-800 focus:outline-none focus:ring-2 transition-colors ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-indigo-500'}`} />
               </div>
+              {/* --- ADDED ERROR MESSAGE DISPLAY FOR EMAIL --- */}
+              {errors.email && (
+                <div className="flex items-center mt-2 text-sm text-red-600">
+                  <AlertCircle size={16} className="mr-1.5" />
+                  {errors.email}
+                </div>
+              )}
             </div>
             <div className="mb-4">
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">Password</label>
